@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { signinSchema, signupSchema } from "../schema";
+import { signinSchema, signupSchema } from "../types";
 import { prisma } from "../lib/prisma";
 import  jwt  from "jsonwebtoken";
 import { authMiddleware } from "../middleware";

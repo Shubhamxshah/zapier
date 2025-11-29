@@ -14,24 +14,30 @@ zapRouter.post("/", authMiddleware, async (req , res) => {
 
     const zapData = parsedData.data;
 
-    const zap = await prisma.zap.create({
-        data: {
-            userId: zapData.userId,
-            trigger: {
-                create: {
-                    triggerId: zapData.availableTriggerId,
-                    metadata: zapData.triggerMetadata || {},
+    try {
+        const zap = await prisma.zap.create({
+            data: {
+                userId: zapData.userId,
+                trigger: {
+                    create: {
+                        triggerId: zapData.availableTriggerId,
+                        metadata: zapData.triggerMetadata || {},
+                    }
+                },
+                actions: {
+                    create: zapData.actions.map((x, index) => ({
+                        actionId: x.availableActionId,
+                        metadata: x.actionMetadata || {},
+                        sortingOrder: index,
+                    }))
                 }
-            }, 
-            actions: {
-                create: zapData.actions.map((x, index) => ({
-                    actionId: x.availableActionId,
-                    metadata: x.actionMetadata || {},
-                }))
             }
-        }
-    });
-    res.status(201).json({ zap });
+        });
+        res.status(201).json({ zap });
+    } catch (error) {
+        console.error("Error creating zap:", error);
+        res.status(500).json({ error: "Failed to create zap" });
+    }
 });
 
 export default zapRouter;

@@ -1,6 +1,6 @@
 import Image from 'next/image'
 import { Button } from './ui/button'
-import GoogleSvg from './google_svg'
+import GoogleSvg from './svg/google_svg'
 
 const HeroComponent = () => {
     return (

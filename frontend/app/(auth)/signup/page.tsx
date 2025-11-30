@@ -8,6 +8,10 @@ import Link from 'next/link'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import axios from 'axios'
+import { useRouter } from 'next/navigation'
+
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
 
 const signupSchema = z.object({
   email: z.string().min(1, 'Email is required').email('Please enter a valid email address'),
@@ -17,6 +21,9 @@ const signupSchema = z.object({
 type SignupFormData = z.infer<typeof signupSchema>;
 
 const Signup = () => {
+
+    const router = useRouter();
+
     const {
         register,
         handleSubmit,
@@ -28,7 +35,15 @@ const Signup = () => {
     const onSubmit = (data: SignupFormData) => {
         console.log('Form submitted:', data);
         // Handle form submission here
-        axios.post('/api/signup', data)
+        axios.post(`${BACKEND_URL}/api/v1/user/signup`, data)
+            .then(response => {
+                console.log('Signup successful:', response.data);
+                // Redirect or perform any other actions upon successful signup
+                router.push('/dashboard');
+            })
+            .catch(error => {
+                console.error('Error during signup:', error);
+            });
     };
 
     return (

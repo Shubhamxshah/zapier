@@ -15,19 +15,19 @@ userRouter.post("/signup", async (req, res) => {
         return res.status(400).json({ errors: parseResult.error });
     }
 
-    const { username, password, name } = parseResult.data;
+    const { email, password, name } = parseResult.data;
 
     const existingUser = await prisma.user.findFirst({
-        where: { username },
+        where: { email },
     });
 
     if (existingUser) {
-        return res.status(409).json({ error: "Username already exists" });
+        return res.status(409).json({ error: "email already exists" });
     }
 
     const user = await prisma.user.create({
         data: {
-            username,
+            email,
             password, // In a real application, make sure to hash the password before storing it
             name,
         },
@@ -45,10 +45,10 @@ userRouter.post("/signin", async (req, res) => {
         return res.status(400).json({ errors: parseResult.error });
     }
 
-    const { username, password } = parseResult.data;
+    const { email, password } = parseResult.data;
 
     const existingUser = await prisma.user.findFirst({
-        where: { username, password },
+        where: { email, password },
     });
 
     if (!existingUser) {
@@ -67,7 +67,7 @@ userRouter.get("/", authMiddleware, async (req, res) => {
         where: { id },
         select: {
             id: true,
-            username: true,
+            email: true,
             name: true,
         },
     });

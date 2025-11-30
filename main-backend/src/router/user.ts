@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { signinSchema, signupSchema } from "../types";
+import { signinSchema, signupSchema } from "../types/index";
 import { prisma } from "../lib/prisma";
 import  jwt  from "jsonwebtoken";
 import { authMiddleware } from "../middleware";
@@ -61,7 +61,7 @@ userRouter.post("/signin", async (req, res) => {
 });
 
 userRouter.get("/", authMiddleware, async (req, res) => {
-    const id = req.body.userId;
+    const id = req.userId;
     
     const user = await prisma.user.findUnique({
         where: { id },

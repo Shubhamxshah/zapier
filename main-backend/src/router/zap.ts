@@ -1,6 +1,6 @@
 import Router from "express";
 import { authMiddleware } from "../middleware";
-import { zapCreateSchema } from "../types";
+import { zapCreateSchema } from "../types/index";
 import { connect } from "http2";
 import { prisma } from "../lib/prisma";
 import z from "zod";

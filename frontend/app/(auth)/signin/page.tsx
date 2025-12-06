@@ -35,10 +35,11 @@ const Signin = () => {
     const onSubmit = (data: SigninFormData) => {
         console.log('Form submitted:', data);
         // Handle form submission here
-        axios.post(`${BACKEND_URL}/api/v1/user/signin`, data)
+        axios.post<{ token: string }>(`${BACKEND_URL}/api/v1/user/signin`, data)
             .then(response => {
                 console.log('Signin successful:', response.data);
                 // Redirect or perform any other actions upon successful signin
+                localStorage.setItem('token', response.data.token);
                 router.push('/dashboard');
             })
             .catch(error => {

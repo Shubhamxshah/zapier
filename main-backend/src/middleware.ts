@@ -1,5 +1,14 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+
+declare global {
+  namespace Express {
+    interface Request {
+      userId?: string;
+    }
+  }
+}
+
 export const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
     // Placeholder for authentication logic
     const authHeader = req.headers.authorization;

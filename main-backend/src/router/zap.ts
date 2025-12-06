@@ -1,13 +1,15 @@
 import Router from "express";
 import { authMiddleware } from "../middleware";
 import { zapCreateSchema } from "../types/index";
-import { connect } from "http2";
-import { prisma } from "../lib/prisma";
-import z from "zod";
+import { prisma } from "../lib/prisma"; 
 
 const zapRouter = Router(); 
 
 zapRouter.post("/", authMiddleware, async (req , res) => {
+    const userId = req.userId;
+    if (typeof userId !== "string") {
+        return res.status(400).json({ error: "Invalid userId" });
+    }
     const parsedData = zapCreateSchema.safeParse(req.body);
     if (!parsedData.success) {
         return res.status(400).json({ errors: parsedData.error });
@@ -18,7 +20,7 @@ zapRouter.post("/", authMiddleware, async (req , res) => {
     try {
         const zap = await prisma.zap.create({
             data: {
-                userId: zapData.userId,
+                userId: userId,
                 trigger: {
                     create: {
                         triggerId: zapData.availableTriggerId,
@@ -42,7 +44,7 @@ zapRouter.post("/", authMiddleware, async (req , res) => {
 });
 
 zapRouter.get("/", authMiddleware, async (req, res) => {
-    const userId = req.query.userId;
+    const userId = req.userId;
     if (typeof userId !== "string") {
         return res.status(400).json({ error: "Invalid userId" });
     }

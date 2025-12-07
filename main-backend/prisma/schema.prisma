@@ -23,6 +23,7 @@ model User {
 
 model Zap {
   id        String   @id @default(uuid())
+  name      String?
   userId    String
   trigger   Trigger?
   actions   Action[]

@@ -21,6 +21,7 @@ zapRouter.post("/", authMiddleware, async (req , res) => {
         const zap = await prisma.zap.create({
             data: {
                 userId: userId,
+                name: zapData.name,
                 trigger: {
                     create: {
                         triggerId: zapData.availableTriggerId,
@@ -53,8 +54,16 @@ zapRouter.get("/", authMiddleware, async (req, res) => {
         const zaps = await prisma.zap.findMany({
             where: { userId },
             include: {
-                trigger: true,
-                actions: true,
+                trigger: {
+                    include: {
+                        type: true
+                    }
+                },
+                actions: {
+                    include: {
+                        type: true
+                    }
+                },
             }
         });
         res.status(200).json({ zaps });

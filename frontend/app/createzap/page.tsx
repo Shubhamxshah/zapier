@@ -43,6 +43,7 @@ interface CustomNodeData {
   label: string;
   type: 'trigger' | 'action';
   selected?: boolean;
+  itemId?: string;
   onConfigure: () => void;
   onAddAction?: () => void;
   onDelete?: () => void;
@@ -278,6 +279,7 @@ const CreateZap = () => {
                 ...node.data,
                 label: item.name,
                 selected: true,
+                itemId: item.id,
               },
             };
           }
@@ -288,9 +290,76 @@ const CreateZap = () => {
     setIsDialogOpen(false);
   };
 
+  const handlePublish = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.error('No token found');
+        return;
+      }
+
+      // Find the trigger node
+      const triggerNode = nodes.find((n) => n.data.type === 'trigger');
+      if (!triggerNode || !triggerNode.data.itemId) {
+        alert('Please select a trigger before publishing');
+        return;
+      }
+
+      // Find all action nodes that have been configured
+      const actionNodes = nodes.filter(
+        (n) => n.data.type === 'action' && n.data.itemId
+      );
+
+      if (actionNodes.length === 0) {
+        alert('Please add and configure at least one action');
+        return;
+      }
+
+      // Prompt user for zap name
+      const zapName = prompt('Enter a name for your Zap:');
+      if (!zapName || zapName.trim() === '') {
+        alert('Zap name is required');
+        return;
+      }
+
+      // Build the zap payload
+      const zapData = {
+        name: zapName.trim(),
+        availableTriggerId: triggerNode.data.itemId,
+        triggerMetadata: {},
+        actions: actionNodes.map((node) => ({
+          availableActionId: node.data.itemId,
+          actionMetadata: {},
+        })),
+      };
+
+      const response = await axios.post(`${BACKEND_URL}/api/v1/zap`, zapData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      alert('Zap published successfully!');
+      console.log('Published zap:', response.data);
+    } catch (error) {
+      console.error('Failed to publish zap:', error);
+      if (axios.isAxiosError(error)) {
+        alert(`Failed to publish zap: ${error.response?.data?.message || error.message}`);
+      } else {
+        alert('Failed to publish zap');
+      }
+    }
+  };
+
   return (
     <div className="h-screen flex flex-col">
       <Navbar />
+      <div className="px-4 py-3 border-b flex justify-between items-center">
+        <h1 className="text-xl font-semibold">Create Zap</h1>
+        <Button onClick={handlePublish} className="bg-blue-600 hover:bg-blue-700">
+          Publish
+        </Button>
+      </div>
       <div className="flex-1">
         <ReactFlow
           nodes={nodes}
@@ -355,3 +424,4 @@ const CreateZap = () => {
 };
 
 export default CreateZap;
+  

@@ -76,7 +76,7 @@ const ZapTable = () => {
         console.log('Token:', token);
         console.log('Backend URL:', BACKEND_URL);
 
-        const response = await axios.get(`${BACKEND_URL}/api/v1/zap`, {
+        const response = await axios.get<{ zaps: Zap[] }>(`${BACKEND_URL}/api/v1/zap`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -87,11 +87,12 @@ const ZapTable = () => {
         console.log('Zaps:', response.data.zaps);
 
         setZaps(response.data.zaps || [])
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Failed to fetch zaps:', error)
-        if (axios.isAxiosError(error)) {
-          console.error('Response data:', error.response?.data);
-          console.error('Response status:', error.response?.status);
+        if (typeof error === 'object' && error !== null && 'response' in error) {
+          const axiosError = error as { response?: { data?: unknown; status?: number } };
+          console.error('Response data:', axiosError.response?.data);
+          console.error('Response status:', axiosError.response?.status);
         }
       } finally {
         setLoading(false)

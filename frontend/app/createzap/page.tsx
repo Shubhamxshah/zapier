@@ -91,8 +91,8 @@ const nodeTypes = {
 };
 
 const CreateZap = () => {
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [dialogType, setDialogType] = useState<'trigger' | 'action'>('trigger');
   const [currentNodeId, setCurrentNodeId] = useState<string | null>(null);
@@ -114,10 +114,13 @@ const CreateZap = () => {
         },
       });
       setActions(response.data);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Failed to fetch actions:', error);
-      if (axios.isAxiosError(error) && error.response?.status === 401) {
-        console.error('Unauthorized: Please check your token');
+      if (typeof error === 'object' && error !== null && 'response' in error) {
+        const axiosError = error as { response?: { status?: number } };
+        if (axiosError.response?.status === 401) {
+          console.error('Unauthorized: Please check your token');
+        }
       }
     } finally {
       setLoading(false);
@@ -138,10 +141,13 @@ const CreateZap = () => {
         },
       });
       setTriggers(response.data);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Failed to fetch triggers:', error);
-      if (axios.isAxiosError(error) && error.response?.status === 401) {
-        console.error('Unauthorized: Please check your token');
+      if (typeof error === 'object' && error !== null && 'response' in error) {
+        const axiosError = error as { response?: { status?: number } };
+        if (axiosError.response?.status === 401) {
+          console.error('Unauthorized: Please check your token');
+        }
       }
     } finally {
       setLoading(false);
@@ -161,9 +167,9 @@ const CreateZap = () => {
   }, [fetchActions, fetchTriggers]);
 
   const handleDeleteNode = useCallback((nodeId: string) => {
-    setNodes((currentNodes) => currentNodes.filter((node) => node.id !== nodeId));
-    setEdges((currentEdges) =>
-      currentEdges.filter((edge) => edge.source !== nodeId && edge.target !== nodeId)
+    setNodes((currentNodes: Node[]) => currentNodes.filter((node: Node) => node.id !== nodeId));
+    setEdges((currentEdges: Edge[]) =>
+      currentEdges.filter((edge: Edge) => edge.source !== nodeId && edge.target !== nodeId)
     );
   }, [setNodes, setEdges]);
 
@@ -341,10 +347,11 @@ const CreateZap = () => {
 
       alert('Zap published successfully!');
       console.log('Published zap:', response.data);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Failed to publish zap:', error);
-      if (axios.isAxiosError(error)) {
-        alert(`Failed to publish zap: ${error.response?.data?.message || error.message}`);
+      if (typeof error === 'object' && error !== null && 'response' in error) {
+        const axiosError = error as { response?: { data?: { message?: string } }; message?: string };
+        alert(`Failed to publish zap: ${axiosError.response?.data?.message || axiosError.message || 'Unknown error'}`);
       } else {
         alert('Failed to publish zap');
       }

@@ -26,6 +26,7 @@ import {
   ArrowUpDown,
 } from 'lucide-react'
 import axios from 'axios'
+import {useRouter} from 'next/navigation'
 
 interface AvailableAction {
   id: string
@@ -65,6 +66,7 @@ interface Zap {
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL
 
 const ZapTable = () => {
+  const router = useRouter();
   const [zaps, setZaps] = useState<Zap[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
@@ -123,7 +125,9 @@ const ZapTable = () => {
               <Trash2 className="h-5 w-5" />
               Trash
             </Button>
-            <Button className="bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-2 px-6">
+            <Button className="bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-2 px-6 hover:cursor-pointer"
+              onClick={() => {router.push('/zap/create')}}
+              >
               <Plus className="h-5 w-5" />
               Create
             </Button>

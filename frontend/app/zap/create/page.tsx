@@ -44,6 +44,7 @@ interface CustomNodeData {
   type: 'trigger' | 'action';
   selected?: boolean;
   itemId?: string;
+  metadata?: Record<string, unknown>;
   onConfigure: () => void;
   onAddAction?: () => void;
   onDelete?: () => void;
@@ -91,14 +92,18 @@ const nodeTypes = {
 };
 
 const CreateZap = () => {
-  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [dialogType, setDialogType] = useState<'trigger' | 'action'>('trigger');
   const [currentNodeId, setCurrentNodeId] = useState<string | null>(null);
   const [actions, setActions] = useState<Action[]>([]);
   const [triggers, setTriggers] = useState<Trigger[]>([]);
   const [loading, setLoading] = useState(false);
+  const [metadataInput, setMetadataInput] = useState<string>('{}');
+  const [selectedItem, setSelectedItem] = useState<Action | Trigger | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
   const fetchActions = useCallback(async () => {
     setLoading(true);
@@ -229,7 +234,13 @@ const CreateZap = () => {
   }, [handleNodeClick, handleDeleteNode, setNodes, setEdges]);
 
   useEffect(() => {
-    // Initialize with default trigger and action nodes
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+
+    // Initialize with default trigger and action nodes only once
     const initialNodes: Node[] = [
       {
         id: '1',
@@ -267,7 +278,8 @@ const CreateZap = () => {
 
     setNodes(initialNodes);
     setEdges(initialEdges);
-  }, [handleNodeClick, handleAddAction, handleDeleteNode, setNodes, setEdges]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mounted]);
 
   const onConnect = useCallback(
     (params: Edge | Connection) => setEdges((eds) => addEdge(params, eds)),
@@ -275,25 +287,47 @@ const CreateZap = () => {
   );
 
   const handleSelectItem = (item: Action | Trigger) => {
-    if (currentNodeId) {
-      setNodes((nds) =>
-        nds.map((node) => {
-          if (node.id === currentNodeId) {
-            return {
-              ...node,
-              data: {
-                ...node.data,
-                label: item.name,
-                selected: true,
-                itemId: item.id,
-              },
-            };
-          }
-          return node;
-        })
-      );
+    setSelectedItem(item);
+    // Get the current node's metadata if it exists
+    const currentNode = nodes.find((n) => n.id === currentNodeId);
+    if (currentNode?.data.metadata) {
+      setMetadataInput(JSON.stringify(currentNode.data.metadata, null, 2));
+    } else {
+      setMetadataInput('{}');
     }
+  };
+
+  const handleSaveMetadata = () => {
+    if (!selectedItem || !currentNodeId) return;
+
+    let parsedMetadata: Record<string, unknown> = {};
+    try {
+      parsedMetadata = JSON.parse(metadataInput);
+    } catch (error) {
+      alert('Invalid JSON format. Please check your metadata input.');
+      return;
+    }
+
+    setNodes((nds) =>
+      nds.map((node) => {
+        if (node.id === currentNodeId) {
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              label: selectedItem.name,
+              selected: true,
+              itemId: selectedItem.id,
+              metadata: parsedMetadata,
+            },
+          };
+        }
+        return node;
+      })
+    );
     setIsDialogOpen(false);
+    setSelectedItem(null);
+    setMetadataInput('{}');
   };
 
   const handlePublish = async () => {
@@ -321,6 +355,24 @@ const CreateZap = () => {
         return;
       }
 
+      // Build a map of node connections to determine order
+      const nodeOrder = new Map<string, number>();
+      let currentId = triggerNode.id;
+      let sortingOrder = 0;
+
+      // Traverse the edges to determine the order of actions
+      while (currentId) {
+        const nextEdge = edges.find((edge) => edge.source === currentId);
+        if (!nextEdge) break;
+
+        const nextNode = nodes.find((n) => n.id === nextEdge.target);
+        if (nextNode && nextNode.data.type === 'action' && nextNode.data.itemId) {
+          nodeOrder.set(nextNode.id, sortingOrder);
+          sortingOrder++;
+        }
+        currentId = nextEdge.target;
+      }
+
       // Prompt user for zap name
       const zapName = prompt('Enter a name for your Zap:');
       if (!zapName || zapName.trim() === '') {
@@ -328,15 +380,24 @@ const CreateZap = () => {
         return;
       }
 
-      // Build the zap payload
+      // Build the zap payload with sorted actions
+      // Sort actions by their position in the flow, backend will assign sortingOrder based on array index
+      const sortedActions = actionNodes
+        .map((node) => ({
+          node,
+          order: nodeOrder.get(node.id) ?? 999,
+        }))
+        .sort((a, b) => a.order - b.order)
+        .map(({ node }) => ({
+          availableActionId: node.data.itemId,
+          actionMetadata: node.data.metadata || {},
+        }));
+
       const zapData = {
         name: zapName.trim(),
         availableTriggerId: triggerNode.data.itemId,
-        triggerMetadata: {},
-        actions: actionNodes.map((node) => ({
-          availableActionId: node.data.itemId,
-          actionMetadata: {},
-        })),
+        triggerMetadata: triggerNode.data.metadata || {},
+        actions: sortedActions,
       };
 
       const response = await axios.post(`${BACKEND_URL}/api/v1/zap`, zapData, {
@@ -357,6 +418,10 @@ const CreateZap = () => {
       }
     }
   };
+
+  if (!mounted) {
+    return null;
+  }
 
   return (
     <div className="h-screen flex flex-col">
@@ -383,7 +448,13 @@ const CreateZap = () => {
         </ReactFlow>
       </div>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <Dialog open={isDialogOpen} onOpenChange={(open) => {
+        setIsDialogOpen(open);
+        if (!open) {
+          setSelectedItem(null);
+          setMetadataInput('{}');
+        }
+      }}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
@@ -393,7 +464,7 @@ const CreateZap = () => {
           <div className="mt-4">
             {loading ? (
               <div className="text-center py-8">Loading...</div>
-            ) : (
+            ) : !selectedItem ? (
               <div className="grid gap-3">
                 {(dialogType === 'trigger' ? triggers : actions).map((item) => (
                   <div
@@ -421,6 +492,49 @@ const CreateZap = () => {
                     No {dialogType === 'trigger' ? 'triggers' : 'actions'} available
                   </div>
                 )}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="p-4 border rounded-lg bg-gray-50 flex items-center gap-4">
+                  {selectedItem.image && (
+                    <img
+                      src={selectedItem.image}
+                      alt={selectedItem.name}
+                      className="w-12 h-12 object-contain flex-shrink-0"
+                    />
+                  )}
+                  <div className="flex-1">
+                    <div className="font-medium">{selectedItem.name}</div>
+                    {selectedItem.description && (
+                      <div className="text-sm text-gray-500 mt-1">{selectedItem.description}</div>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Metadata (JSON)
+                  </label>
+                  <textarea
+                    value={metadataInput}
+                    onChange={(e) => setMetadataInput(e.target.value)}
+                    className="w-full h-48 p-3 border rounded-lg font-mono text-sm"
+                    placeholder='{"key": "value"}'
+                  />
+                </div>
+                <div className="flex gap-2 justify-end">
+                  <Button
+                    onClick={() => {
+                      setSelectedItem(null);
+                      setMetadataInput('{}');
+                    }}
+                    variant="outline"
+                  >
+                    Back
+                  </Button>
+                  <Button onClick={handleSaveMetadata} className="bg-blue-600 hover:bg-blue-700">
+                    Save
+                  </Button>
+                </div>
               </div>
             )}
           </div>

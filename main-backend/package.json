@@ -7,6 +7,9 @@
     "start": "tsc -b && node dist/src/index.js",
     "dev": "nodemon src/index.ts"
   },
+  "prisma": {
+    "seed": "ts-node --esm   prisma/seed.ts"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",

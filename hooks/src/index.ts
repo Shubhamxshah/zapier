@@ -2,6 +2,7 @@ import express from "express";
 import { prisma } from "./lib/prisma";    
 
 const app = express();
+const PORT = process.env.PORT || 3002;
 app.use(express.json());
 
 app.post("/hooks/catch/:userId/:zapId", async (req, res) => {
@@ -25,4 +26,8 @@ app.post("/hooks/catch/:userId/:zapId", async (req, res) => {
             }
         })
     })
+})
+
+app.listen(PORT, () => {
+    console.log(`Hooks server is running on port ${PORT}`);
 })

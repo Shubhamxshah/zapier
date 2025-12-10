@@ -64,12 +64,14 @@ interface Zap {
 }
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL
+const HOOKS_URL = process.env.NEXT_PUBLIC_HOOKS_URL
 
 const ZapTable = () => {
   const router = useRouter();
   const [zaps, setZaps] = useState<Zap[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
+  const [copiedId, setCopiedId] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchZaps = async () => {
@@ -103,6 +105,16 @@ const ZapTable = () => {
 
     fetchZaps()
   }, [])
+
+  const copyToClipboard = async (zapId: string, url: string) => {
+    try {
+      await navigator.clipboard.writeText(url)
+      setCopiedId(zapId)
+      setTimeout(() => setCopiedId(null), 2000)
+    } catch (err) {
+      console.error('Failed to copy:', err)
+    }
+  }
 
   const filteredZaps = zaps.filter(zap => {
     if (!searchQuery) return true
@@ -184,6 +196,7 @@ const ZapTable = () => {
                   </div>
                 </TableHead>
                 <TableHead className="font-semibold text-gray-700">Apps</TableHead>
+                <TableHead className="font-semibold text-gray-700">Webhook URL</TableHead>
                 <TableHead className="font-semibold text-gray-700">Location</TableHead>
                 <TableHead className="font-semibold text-gray-700">
                   <div className="flex items-center gap-1">
@@ -204,13 +217,13 @@ const ZapTable = () => {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-12 text-gray-500">
+                  <TableCell colSpan={8} className="text-center py-12 text-gray-500">
                     Loading zaps...
                   </TableCell>
                 </TableRow>
               ) : filteredZaps.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-12 text-gray-500">
+                  <TableCell colSpan={8} className="text-center py-12 text-gray-500">
                     No zaps found
                   </TableCell>
                 </TableRow>
@@ -257,6 +270,15 @@ const ZapTable = () => {
                         {zap.actions.length > 3 && (
                           <span className="text-xs text-gray-500 ml-1">+{zap.actions.length - 3}</span>
                         )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div
+                        className="text-sm text-gray-600 truncate max-w-xs cursor-pointer hover:text-purple-600 hover:underline transition-colors"
+                        title={copiedId === zap.id ? 'Copied!' : 'Click to copy'}
+                        onClick={() => copyToClipboard(zap.id, `${HOOKS_URL}/hooks/catch/1/${zap.id}`)}
+                      >
+                        {copiedId === zap.id ? 'Copied!' : `${HOOKS_URL}/hooks/catch/1/${zap.id}`}
                       </div>
                     </TableCell>
                     <TableCell>

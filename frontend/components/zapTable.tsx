@@ -276,9 +276,9 @@ const ZapTable = () => {
                       <div
                         className="text-sm text-gray-600 truncate max-w-xs cursor-pointer hover:text-purple-600 hover:underline transition-colors"
                         title={copiedId === zap.id ? 'Copied!' : 'Click to copy'}
-                        onClick={() => copyToClipboard(zap.id, `${HOOKS_URL}/hooks/catch/1/${zap.id}`)}
+                        onClick={() => copyToClipboard(zap.id, `${HOOKS_URL}/hooks/catch/${zap.userId}/${zap.id}`)}
                       >
-                        {copiedId === zap.id ? 'Copied!' : `${HOOKS_URL}/hooks/catch/1/${zap.id}`}
+                        {copiedId === zap.id ? 'Copied!' : `${HOOKS_URL}/hooks/catch/${zap.userId}/${zap.id}`}
                       </div>
                     </TableCell>
                     <TableCell>

@@ -16,7 +16,6 @@ app.post("/hooks/catch/:userId/:zapId", async (req, res) => {
         const run = await tx.zapRun.create({
             data: {
                 zapId: zapId,
-                metadata: body
             },
         });
 
@@ -26,6 +25,8 @@ app.post("/hooks/catch/:userId/:zapId", async (req, res) => {
             }
         })
     })
+
+    res.status(200).json({ message: "Hook received" });
 })
 
 app.listen(PORT, () => {

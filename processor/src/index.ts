@@ -1,16 +1,29 @@
 import { prisma } from "./lib/prisma";
-import { Kafka } from "kafkajs";
+import { Kafka, Admin, logLevel } from "kafkajs";
 
 const kafka = new Kafka({
     clientId: 'outbox-processor',
-    brokers: ['localhost:9092']
+    brokers: ['localhost:9092'],
+    logLevel: logLevel.ERROR,
 })
 
 const TOPIC_NAME = "zap-events";
 
 async function main() {
+    const admin = kafka.admin();
+    await admin.connect();
+    const topics = await admin.listTopics();
+    if (!topics.includes(TOPIC_NAME)) {
+        await admin.createTopics({
+            topics: [{ topic: TOPIC_NAME }],
+        });
+        console.log(`Created topic ${TOPIC_NAME}`);
+    }
+    await admin.disconnect();
     const producer = kafka.producer();
     await producer.connect();
+
+
 
     while (true) {
         try {
@@ -19,6 +32,7 @@ async function main() {
                 take: 10,
             }); // fetches 10 at a time, if has lesser than 10, will fetch however many there are
 
+            console.log(pendingRows)
             if (pendingRows.length > 0) {
                 await producer.send({
                     topic: TOPIC_NAME,

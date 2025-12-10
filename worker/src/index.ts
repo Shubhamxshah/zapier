@@ -1,4 +1,5 @@
 import { Kafka } from "kafkajs";
+import { prisma } from "./lib/prisma";
 
 const kafka = new Kafka({
   clientId: 'my-app',
@@ -14,11 +15,15 @@ async function main() {
 
   await consumer.run({
     eachMessage: async ({ topic, partition, message }) => {
-      console.log({
-        value: message.value?.toString(),
+      const zapId = message.value?.toString();
+      
+      const zapdata = await prisma.zap.findMany({
+        where: { id: zapId! }, 
       })
+
+      console.log(`Received message: ${zapId}`, zapdata);
     },
   })
 }
 
-main(); 
+main();

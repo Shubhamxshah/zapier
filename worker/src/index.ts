@@ -15,13 +15,48 @@ async function main() {
 
   await consumer.run({
     eachMessage: async ({ topic, partition, message }) => {
-      const zapId = message.value?.toString();
+      const zapRunId = message.value?.toString();
       
-      const zapdata = await prisma.zap.findMany({
-        where: { id: zapId! }, 
+      const zapRunData = await prisma.zapRun.findUnique({
+        where: { id: zapRunId! },
+        select: {
+          zapId: true,
+        }
       })
 
-      console.log(`Received message: ${zapId}`, zapdata);
+      const zapData = await prisma.zap.findUnique({
+        where: { id: zapRunData!.zapId },
+        include: {
+          Trigger: true, 
+          Action: true,
+        }
+      })
+      console.dir({ zapRunId, zapRunData, zapData }, { depth: null });
+
+      const actionLength = zapData?.Action.length || 0;
+      let stage = zapData?.stage || 0;
+
+      while (stage < actionLength) {
+        switch (zapData?.Action[0].actionId) {
+          case "email": 
+            // Handle email action
+            //@ts-ignore
+            const email = zapData?.Action[stage].metadata?.email;
+            //@ts-ignore
+            const body = zapData?.Action[stage].metadata?.body;
+            processEmail(email, body);
+            stage++;
+            await prisma.zap.update({
+              where: { id: zapData.id },
+              data: { stage }
+            });
+            break;
+          case "sol":
+            // Handle sol action
+            console.log("send sol")
+            break;
+        }
+      }
     },
   })
 }
